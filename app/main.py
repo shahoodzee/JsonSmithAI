@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.json_router import router as json_router
+from app.api.v1.image_router import router as image_router
 
 app = FastAPI(
     title="JsonSmithAI API",
@@ -25,6 +26,7 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(json_router, prefix="/api/v1", tags=["Json Core"])
+app.include_router(image_router, prefix="/api/v1", tags=["Image Extraction"])
 
 @app.get("/")
 async def root():
