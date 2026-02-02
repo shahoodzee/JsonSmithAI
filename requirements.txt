@@ -1,10 +1,6 @@
 fastapi
 uvicorn
 pydantic-settings
-transformers
-torch
-pillow
-sentencepiece
 python-multipart
 httpx
 # supabase
