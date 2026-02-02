@@ -18,11 +18,19 @@ async def extract_json(
     Returns the visual text found in the image, parsed as JSON if possible.
     """
     
+    # Validation: Handle default values from tools like Swagger
+    if image_url and image_url.strip() in ("", "string"):
+        image_url = None
+
     if not file and not image_url:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either 'file' or 'image_url' must be provided."
         )
+
+    # If file is provided, prioritize it over URL to prevent conflicts
+    if file:
+        image_url = None
 
     # All logic including fetching URL is finding handled by the service now or previously by router
     # But since OCR.Space handles URLs directly, we can pass the URL to the service.

@@ -22,12 +22,17 @@ class OCRService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Server configuration error: OCR API Key missing."
             )
-            
+        
+        # Match user's working curl: apikey in header
+        headers = {
+            "apikey": self.api_key
+        }
+
         data = {
-            "apikey": self.api_key,
             "language": "eng",
             "isOverlayRequired": "false",
-            "OCREngine": "2"
+            "OCREngine": "2",
+            "scale": "true", # Added based on user request
         }
         
         files = None
@@ -35,15 +40,15 @@ class OCRService:
         if image_url:
             data["url"] = image_url
         elif file:
-            # Read file content for upload
-            # OCR.Space expects the file in the 'file' field
             content = await file.read()
+            # httpx format: "field_name": (filename, content, content_type)
             files = {"file": (file.filename, content, file.content_type)}
             
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
                     self.BASE_URL,
+                    headers=headers,
                     data=data,
                     files=files,
                     timeout=30.0
