@@ -38,7 +38,4 @@ async def extract_json(
     
     result = await ocr_service.extract_text(file=file, image_url=image_url)
     
-    return {
-        "status": "success",
-        "data": result
-    }
+    return result

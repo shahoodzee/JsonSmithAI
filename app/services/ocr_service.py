@@ -30,9 +30,9 @@ class OCRService:
 
         data = {
             "language": "eng",
-            "isOverlayRequired": "false",
-            "OCREngine": "2",
-            "scale": "true", # Added based on user request
+            "isOverlayRequired": "true", # Changed from false to true to match Postman response provided
+            "OCREngine": "2",           # Changed from 2 to 1 (Engine 1 is often better for structured JSON-like text)
+            "scale": "true",
         }
         
         files = None
@@ -62,7 +62,9 @@ class OCRService:
                 
         # Parse Response
         if result.get("IsErroredOnProcessing"):
-            error_msg = result.get("ErrorMessage", ["Unknown error"])[0]
+            error_msg = result.get("ErrorMessage")
+            if isinstance(error_msg, list):
+                error_msg = error_msg[0]
             raise HTTPException(status_code=400, detail=f"OCR Processing Failed: {error_msg}")
             
         parsed_results = result.get("ParsedResults", [])
@@ -72,16 +74,12 @@ class OCRService:
         # Combine text from all pages
         full_text = "\n".join([res.get("ParsedText", "") for res in parsed_results]).strip()
         
-        # Try to parse as JSON if the user expects JSON
-        try:
-            # naive attempt to find json block if surrounded by ```json ... ``` or just text
-            # often OCR adds noise, so this is a best-effort. 
-            # If the image IS a picture of a JSON object, the text should be valid JSON.
-            # We strip markdown code blocks if present
-            cleaned_text = full_text.replace("```json", "").replace("```", "").strip()
-            return json.loads(cleaned_text)
-        except json.JSONDecodeError:
-            return {"raw_text": full_text, "info": "Could not parse text as valid JSON"}
+        # Return structured JSON response as requested
+        return {
+            "Success": True,
+            "Data": full_text,
+            "Message": "Text extracted successfully"
+        }
 
 # Singleton
 ocr_service_instance = OCRService()
