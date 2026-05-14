@@ -1,7 +1,41 @@
 import httpx
 import json
+from typing import Any, Optional, Tuple
+
 from fastapi import HTTPException, status, UploadFile
+
 from app.config import get_settings
+
+
+def _strip_markdown_code_fence(text: str) -> str:
+    """Remove leading ``` / ```json and trailing ``` from model/OCR-wrapped JSON."""
+    t = text.strip()
+    if not t.startswith("```"):
+        return t
+    first_nl = t.find("\n")
+    if first_nl == -1:
+        return t
+    body = t[first_nl + 1 :]
+    end = body.rfind("```")
+    if end != -1:
+        body = body[:end]
+    return body.strip()
+
+
+def _try_parse_json_after_ocr(text: str) -> Tuple[str, Optional[Any]]:
+    """
+    Strip common markdown wrappers, then attempt json.loads.
+    Returns (cleaned_text, parsed_or_none).
+    """
+    cleaned = _strip_markdown_code_fence(text)
+    candidates = (cleaned, cleaned.replace("\\n", "\n"))
+    for candidate in candidates:
+        try:
+            return cleaned, json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+    return cleaned, None
+
 
 class OCRService:
     BASE_URL = "https://api8.ocr.space/parse/image"
@@ -12,10 +46,21 @@ class OCRService:
         if not self.api_key or self.api_key == "helloworld":
             print("WARNING: OCR_SPACE_API_KEY is not set. Inference will fail.")
 
-    async def extract_text(self, file: UploadFile = None, image_url: str = None) -> dict:
+    async def extract_text(
+        self,
+        file: Optional[UploadFile] = None,
+        image_url: Optional[str] = None,
+    ) -> dict:
         """
         Sends the image to OCR.Space and returns the parsed result.
-        Returns a dict that tries to be the JSON structure if found, otherwise returns text.
+
+        OCR may return JSON wrapped in markdown fences (```json ... ```); that wrapper
+        is stripped and valid JSON is returned as a parsed object in Data.
+
+        If no text is detected or the text is not valid JSON, returns Success false and a
+        descriptive Message (character-level OCR mistakes can still make JSON invalid).
+
+        Character-level OCR mistakes (e.g. _ vs space in identifiers) are not corrected.
         """
         if not self.api_key:
              raise HTTPException(
@@ -31,7 +76,7 @@ class OCRService:
         data = {
             "language": "eng",
             "isOverlayRequired": "true", # Changed from false to true to match Postman response provided
-            "OCREngine": "2",           # Changed from 2 to 1 (Engine 1 is often better for structured JSON-like text)
+            "OCREngine": "3",           # Changed from 2 to 1 (Engine 1 is often better for structured JSON-like text)
             "scale": "true",
         }
         
@@ -69,16 +114,38 @@ class OCRService:
             
         parsed_results = result.get("ParsedResults", [])
         if not parsed_results:
-            return {"text": "", "warning": "No text found"}
-            
+            return {
+                "Success": False,
+                "Data": None,
+                "Message": "No text could be read from the image.",
+                "IsJson": False,
+            }
+
         # Combine text from all pages
         full_text = "\n".join([res.get("ParsedText", "") for res in parsed_results]).strip()
-        
-        # Return structured JSON response as requested
+        if not full_text:
+            return {
+                "Success": False,
+                "Data": None,
+                "Message": "No text could be read from the image.",
+                "IsJson": False,
+            }
+
+        cleaned_text, parsed = _try_parse_json_after_ocr(full_text)
+        if parsed is None:
+            return {
+                "Success": False,
+                "Data": None,
+                "Message": "Could not parse the image as JSON.",
+                "IsJson": False,
+                "ExtractedText": cleaned_text,
+            }
+
         return {
             "Success": True,
-            "Data": full_text,
-            "Message": "Text extracted successfully"
+            "Message": "Text extracted successfully",
+            "Data": parsed,
+            "IsJson": True,
         }
 
 # Singleton

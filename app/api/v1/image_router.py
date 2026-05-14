@@ -15,7 +15,8 @@ async def extract_json(
     """
     Extract JSON from an image using OCR.Space.
     Accepts either a file upload OR an image URL.
-    Returns the visual text found in the image, parsed as JSON if possible.
+    On success, Data is parsed JSON. If OCR yields no text or text that is not valid JSON,
+    Success is false and Message explains the failure (see OCR service).
     """
     
     # Validation: Handle default values from tools like Swagger
