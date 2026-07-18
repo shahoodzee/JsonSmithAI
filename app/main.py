@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.api.v1.image_router import router as image_router
+from app.api.v1.samples_router import router as samples_router
 
 app = FastAPI(
     title="JsonSmithAI API",
@@ -40,6 +41,7 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(image_router, prefix="/api/v1", tags=["Image Extraction"])
+app.include_router(samples_router, prefix="/api/v1", tags=["JSON Builder"])
 
 @app.get("/")
 async def root():
