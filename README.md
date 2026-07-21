@@ -268,4 +268,8 @@ JsonSmithAI/
 
 ## License
 
-Proprietary — JsonSmith / internal use unless otherwise specified.
+Copyright © 2026 shahoodzee. All rights reserved.
+
+This repository is a personal/portfolio project. No license is granted.
+You may view the code on GitHub, but you may not copy, modify, distribute,
+or use it for any purpose without prior written permission.
