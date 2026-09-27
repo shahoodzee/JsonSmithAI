@@ -27,6 +27,9 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 # CORS Configuration
+# Note: allow_credentials=True is incompatible with allow_origins=["*"] per the CORS spec
+# (browsers reject it, and Starlette ≥0.27 raises ValueError at startup).
+# Credentials are not needed for this API, so allow_credentials is set to False.
 origins = [
     "*", # Allow all for POC. In production, change to specific domains.
 ]
@@ -34,7 +37,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
